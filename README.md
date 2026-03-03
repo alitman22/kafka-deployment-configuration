@@ -8,71 +8,68 @@ Comprehensive role-based Ansible project to deploy:
 - **Network exposure model**: NAT-aware Kafka external listener with pfSense artifacts.
 - **Scale-out support**: add brokers and rebalance partitions.
 
-## Architecture Diagram
+## Architecture Diagrams
+
+### 1) Production traffic and security flow
 
 ```mermaid
 flowchart LR
-    subgraph WAN[External Clients]
-      C1[Kafka Client Apps]
-    end
+    C[External Kafka Clients] --> P[pfSense NAT + ACL]
+    P -->|TLS/SASL or mTLS| K1[kafka-1]
+    P -->|TLS/SASL or mTLS| K2[kafka-2]
+    P -->|TLS/SASL or mTLS| K3[kafka-3]
 
-    subgraph FW[pfSense Firewall]
-      NAT[NAT + ACL Rules]
-    end
+    K1 <--> Z1[zk-1]
+    K2 <--> Z2[zk-2]
+    K3 <--> Z3[zk-3]
 
-    subgraph PROD[Ubuntu 22.04 Production Cluster]
-      subgraph ZK[Zookeeper Ensemble]
-        Z1[zk-1]
-        Z2[zk-2]
-        Z3[zk-3]
-      end
+    U[UFW ACL Hardening] --> K1
+    U --> K2
+    U --> K3
+```
 
-      subgraph KF[Kafka Brokers]
-        K1[kafka-1]
-        K2[kafka-2]
-        K3[kafka-3]
-      end
+This graph focuses on how production clients reach Kafka through pfSense, how brokers depend on ZooKeeper quorum, and where host-level firewall hardening applies.
 
+### 2) Operations, observability, and dev/staging parity
+
+```mermaid
+flowchart LR
+    subgraph PROD[Ubuntu 22.04 Production]
+      K1[kafka-1]
+      K2[kafka-2]
+      K3[kafka-3]
       RC[Redpanda Console]
       CH[Chrony]
-      NE[Node Exporter]
-      JMX[JMX Exporter]
-      UFW[UFW ACL Hardening]
+      J[JMX Exporter]
+      N[Node Exporter]
+      PR[Prometheus]
+      G[Grafana]
     end
 
-    C1 --> NAT
-    NAT -->|EXTERNAL TLS/SASL or mTLS| K1
-    NAT -->|EXTERNAL TLS/SASL or mTLS| K2
-    NAT -->|EXTERNAL TLS/SASL or mTLS| K3
-
-    K1 <--> Z1
-    K2 <--> Z2
-    K3 <--> Z3
     RC --> K1
     RC --> K2
     RC --> K3
-    JMX --> K1
-    JMX --> K2
-    JMX --> K3
-    NE --> K1
-    NE --> K2
-    NE --> K3
     CH --> K1
     CH --> K2
     CH --> K3
-    UFW --> K1
-    UFW --> K2
-    UFW --> K3
+    J --> K1
+    J --> K2
+    J --> K3
+    N --> PR
+    J --> PR
+    PR --> G
 
     subgraph DEV[Docker Dev/Staging]
-      D1[3x Zookeeper]
-      D2[3x Kafka]
-      D3[Redpanda Console]
-      D4[Node + JMX Exporters]
-      D5[Prometheus]
-      D6[Grafana]
+      DZ[3x Zookeeper]
+      DK[3x Kafka]
+      DRC[Redpanda Console]
+      DJN[Node + JMX Exporters]
+      DPR[Prometheus]
+      DG[Grafana]
     end
 ```
+
+This graph separates day-2 operations from traffic flow: admin tooling, metrics pipeline (JMX/Node exporter to Prometheus to Grafana), and the equivalent Docker stack used for pre-production testing.
 
 ## Why each non-Kafka component exists
 
