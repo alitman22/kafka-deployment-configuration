@@ -94,9 +94,9 @@ This guide walks newcomers through deploying a complete 3-broker Kafka cluster w
 ### Network Topology
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Docker Network                            │
-│                                                              │
+┌────────────────────────────────────────────────────────────┐
+│                    Docker Network                          │
+│                                                            │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │  ZooKeeper1  │  │  ZooKeeper2  │  │  ZooKeeper3  │      │
 │  │  :22181      │  │  :32181      │  │  :42181      │      │
@@ -128,7 +128,7 @@ This guide walks newcomers through deploying a complete 3-broker Kafka cluster w
 │  │   Grafana     │                                         │
 │  │    :3000      │                                         │
 │  └───────────────┘                                         │
-└─────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────┘
 ```
 
 ### Port Mappings
