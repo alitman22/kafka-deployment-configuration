@@ -3,5 +3,14 @@
   hosts: monitoring
   gather_facts: true
   become: true
+  pre_tasks:
+    - name: Ensure vault variable for Grafana admin password is provided
+      ansible.builtin.assert:
+        that:
+          - vault_grafana_admin_password is defined
+        fail_msg: >-
+          Missing vault_grafana_admin_password. Create/encrypt
+          inventories/prod/group_vars/vault.yml from
+          inventories/prod/group_vars/vault.example.yml.
   roles:
     - role: prometheus_grafana

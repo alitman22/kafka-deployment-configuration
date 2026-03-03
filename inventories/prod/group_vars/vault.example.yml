@@ -1,0 +1,13 @@
+---
+# Copy to inventories/prod/group_vars/vault.yml and encrypt it:
+# ansible-vault encrypt inventories/prod/group_vars/vault.yml
+
+vault_kafka_ssl_keystore_password: "change-me-keystore-pass"
+vault_kafka_ssl_key_password: "change-me-key-pass"
+vault_kafka_ssl_truststore_password: "change-me-truststore-pass"
+
+vault_kafka_sasl_interbroker_password: "change-me-interbroker-pass"
+vault_kafka_sasl_admin_password: "change-me-admin-pass"
+vault_kafka_sasl_appclient_password: "change-me-appclient-pass"
+
+vault_grafana_admin_password: "change-me-grafana-admin-pass"

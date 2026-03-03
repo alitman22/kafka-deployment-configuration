@@ -101,6 +101,16 @@ This graph separates day-2 operations from traffic flow: admin tooling, metrics 
   - `allow.everyone.if.no.acl.found=false`
   - `super.users` controlled by inventory vars.
 
+## Ansible Vault usage (where it is used)
+
+Production secrets are vault-backed and referenced from `inventories/prod/group_vars/all.yml` via `vault_*` variables.
+
+- **Kafka TLS/JKS secrets**: `vault_kafka_ssl_keystore_password`, `vault_kafka_ssl_key_password`, `vault_kafka_ssl_truststore_password`
+- **Kafka SASL secrets**: `vault_kafka_sasl_interbroker_password`, `vault_kafka_sasl_admin_password`, `vault_kafka_sasl_appclient_password`
+- **Grafana admin secret**: `vault_grafana_admin_password`
+
+Secret source file is `inventories/prod/group_vars/vault.yml` (encrypted with Ansible Vault). A starter template is provided at `inventories/prod/group_vars/vault.example.yml`.
+
 ## Repository layout
 
 - `playbooks/prod.yml` - production install (includes `kafka_pki`, `kafka_security`, `firewall_acl`).
@@ -113,6 +123,7 @@ This graph separates day-2 operations from traffic flow: admin tooling, metrics 
 - `roles/prometheus_grafana` - optional production monitoring stack role.
 - `roles/*` - remaining infra, Kafka, Zookeeper, monitoring, console roles.
 - `generated/` - pfSense NAT artifacts generated from inventory.
+- `inventories/prod/group_vars/vault.example.yml` - template for encrypted production secrets.
 
 ## Configure production inventory
 
@@ -120,9 +131,23 @@ Update host mappings in `inventories/prod/hosts.yml`, then tune security and ACL
 
 - `kafka_pki_enabled: true|false`
 - `kafka_security_mode: sasl_ssl` or `mtls`
-- SASL identities/passwords (`kafka_sasl_*`)
-- `kafka_ssl_*` keystore/truststore paths and passwords
+- SASL identities (passwords come from vault-backed `vault_kafka_sasl_*` vars)
+- `kafka_ssl_*` keystore/truststore paths (passwords come from vault-backed `vault_kafka_ssl_*` vars)
 - ACL source ranges (`firewall_admin_cidrs`, `firewall_kafka_client_cidrs`, etc.)
+
+Create encrypted production secrets file:
+
+```bash
+cp inventories/prod/group_vars/vault.example.yml inventories/prod/group_vars/vault.yml
+ansible-vault encrypt inventories/prod/group_vars/vault.yml
+```
+
+Optional (avoid interactive prompt each run):
+
+```bash
+ansible-vault create .vault_pass.txt
+chmod 600 .vault_pass.txt
+```
 
 Optional monitoring host is provided in inventory as `monitoring-1` (group: `monitoring`).
 
@@ -137,7 +162,13 @@ ansible-galaxy collection install -r requirements.yml
 Run production:
 
 ```bash
-ansible-playbook -i inventories/prod/hosts.yml playbooks/prod.yml
+ansible-playbook -i inventories/prod/hosts.yml playbooks/prod.yml --ask-vault-pass
+```
+
+Or with a vault password file:
+
+```bash
+ansible-playbook -i inventories/prod/hosts.yml playbooks/prod.yml --vault-password-file .vault_pass.txt
 ```
 
 Run docker dev/staging:
@@ -157,7 +188,7 @@ Docker endpoints after deploy:
 1. Run scale playbook:
 
 ```bash
-ansible-playbook -i inventories/prod/hosts.yml playbooks/scale_add_broker.yml
+ansible-playbook -i inventories/prod/hosts.yml playbooks/scale_add_broker.yml --ask-vault-pass
 ```
 
 1. Generate reassignment plan:
@@ -181,7 +212,7 @@ Production playbook generates:
 1. Deploy optional monitoring stack:
 
 ```bash
-ansible-playbook -i inventories/prod/hosts.yml playbooks/prod_monitoring.yml
+ansible-playbook -i inventories/prod/hosts.yml playbooks/prod_monitoring.yml --ask-vault-pass
 ```
 
 1. Access services: Prometheus `http://<monitoring-host>:9090`, Grafana `http://<monitoring-host>:3000`.

@@ -11,6 +11,22 @@
           - ansible_distribution_version is version('22.04', '>=')
         fail_msg: "This playbook supports Ubuntu 22.04+ only."
 
+    - name: Ensure required vault variables are provided for production security
+      ansible.builtin.assert:
+        that:
+          - vault_kafka_ssl_keystore_password is defined
+          - vault_kafka_ssl_key_password is defined
+          - vault_kafka_ssl_truststore_password is defined
+          - vault_kafka_sasl_interbroker_password is defined
+          - vault_kafka_sasl_admin_password is defined
+          - vault_kafka_sasl_appclient_password is defined
+        fail_msg: >-
+          Missing required vault variables. Create/encrypt
+          inventories/prod/group_vars/vault.yml from
+          inventories/prod/group_vars/vault.example.yml.
+      when:
+        - kafka_security_enabled | bool
+
 - name: Configure baseline components
   hosts: all
   gather_facts: true
