@@ -1,0 +1,46 @@
+---
+- name: Ensure kafka security directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0750'
+  loop:
+    - /etc/kafka
+    - /etc/kafka/secrets
+  when: kafka_security_enabled | bool
+
+- name: Verify TLS keystore exists
+  ansible.builtin.stat:
+    path: "{{ kafka_ssl_keystore_location }}"
+  register: kafka_keystore_stat
+  when: kafka_security_enabled | bool
+
+- name: Verify TLS truststore exists
+  ansible.builtin.stat:
+    path: "{{ kafka_ssl_truststore_location }}"
+  register: kafka_truststore_stat
+  when: kafka_security_enabled | bool
+
+- name: Fail if TLS keystore/truststore missing
+  ansible.builtin.assert:
+    that:
+      - kafka_keystore_stat.stat.exists
+      - kafka_truststore_stat.stat.exists
+    fail_msg: >-
+      TLS store files are missing. Provide JKS files at
+      {{ kafka_ssl_keystore_location }} and {{ kafka_ssl_truststore_location }}
+      before running production secure deployment.
+  when: kafka_security_enabled | bool
+
+- name: Render Kafka JAAS config for SASL/PLAIN
+  ansible.builtin.template:
+    src: kafka_server_jaas.conf.j2
+    dest: "{{ kafka_security_jaas_path }}"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0640'
+  when:
+    - kafka_security_enabled | bool
+    - kafka_security_mode == 'sasl_ssl'

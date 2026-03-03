@@ -18,6 +18,7 @@
   roles:
     - role: common
     - role: chrony
+    - role: firewall_acl
     - role: node_exporter
 
 - name: Install and configure Zookeeper ensemble
@@ -32,6 +33,8 @@
   gather_facts: true
   become: true
   roles:
+    - role: kafka_pki
+    - role: kafka_security
     - role: jmx_exporter
     - role: kafka
 

@@ -8,3 +8,7 @@ kafka_transaction_state_log_min_isr: 2
 kafka_log_retention_hours: 168
 kafka_message_max_bytes: 10485880
 kafka_enable_nat_external_listener: true
+kafka_security_enabled: false
+kafka_security_mode: sasl_ssl
+kafka_internal_protocol: "{{ 'SASL_SSL' if (kafka_security_enabled and kafka_security_mode == 'sasl_ssl') else ('SSL' if kafka_security_enabled else 'PLAINTEXT') }}"
+kafka_external_protocol: "{{ 'SASL_SSL' if (kafka_security_enabled and kafka_security_mode == 'sasl_ssl') else ('SSL' if kafka_security_enabled else 'PLAINTEXT') }}"

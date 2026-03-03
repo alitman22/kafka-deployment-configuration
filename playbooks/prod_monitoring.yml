@@ -1,0 +1,7 @@
+---
+- name: Optional production monitoring stack (Prometheus + Grafana)
+  hosts: monitoring
+  gather_facts: true
+  become: true
+  roles:
+    - role: prometheus_grafana

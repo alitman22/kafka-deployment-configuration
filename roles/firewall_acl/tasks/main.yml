@@ -1,0 +1,108 @@
+---
+- name: Install UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+  when: firewall_acl_enabled | bool
+
+- name: Set UFW default incoming policy deny
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+  when: firewall_acl_enabled | bool
+
+- name: Set UFW default outgoing policy allow
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+  when: firewall_acl_enabled | bool
+
+- name: Allow SSH from admin CIDRs
+  community.general.ufw:
+    rule: allow
+    port: '22'
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ firewall_admin_cidrs }}"
+  when: firewall_acl_enabled | bool
+
+- name: Allow Zookeeper client port from internal cluster CIDRs
+  community.general.ufw:
+    rule: allow
+    port: "{{ zookeeper_client_port }}"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ firewall_internal_cluster_cidrs }}"
+  when:
+    - firewall_acl_enabled | bool
+    - "'zookeeper' in group_names"
+
+- name: Allow Zookeeper quorum/election ports from internal cluster CIDRs
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.0 }}"
+    proto: tcp
+    src: "{{ item.1 }}"
+  loop: "{{ [zookeeper_peer_port, zookeeper_election_port] | product(firewall_internal_cluster_cidrs) | list }}"
+  when:
+    - firewall_acl_enabled | bool
+    - "'zookeeper' in group_names"
+
+- name: Allow Kafka internal listener from internal cluster CIDRs
+  community.general.ufw:
+    rule: allow
+    port: "{{ kafka_internal_listener_port }}"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ firewall_internal_cluster_cidrs }}"
+  when:
+    - firewall_acl_enabled | bool
+    - "'kafka' in group_names"
+
+- name: Allow Kafka external listener from approved client CIDRs
+  community.general.ufw:
+    rule: allow
+    port: "{{ kafka_external_listener_port }}"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ firewall_kafka_client_cidrs }}"
+  when:
+    - firewall_acl_enabled | bool
+    - "'kafka' in group_names"
+
+- name: Allow Kafka JMX exporter scrape port from monitoring CIDRs
+  community.general.ufw:
+    rule: allow
+    port: "{{ jmx_exporter_port }}"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ firewall_monitoring_cidrs }}"
+  when:
+    - firewall_acl_enabled | bool
+    - "'kafka' in group_names"
+
+- name: Allow Node exporter scrape port from monitoring CIDRs
+  community.general.ufw:
+    rule: allow
+    port: "{{ node_exporter_port }}"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ firewall_monitoring_cidrs }}"
+  when: firewall_acl_enabled | bool
+
+- name: Allow Redpanda Console port from approved CIDRs
+  community.general.ufw:
+    rule: allow
+    port: "{{ redpanda_console_port }}"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ firewall_console_cidrs }}"
+  when:
+    - firewall_acl_enabled | bool
+    - "'console' in group_names"
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+  when: firewall_acl_enabled | bool

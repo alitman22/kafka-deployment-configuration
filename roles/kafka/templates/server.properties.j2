@@ -2,8 +2,33 @@ broker.id={{ kafka_broker_id }}
 
 listeners=INTERNAL://0.0.0.0:{{ kafka_internal_listener_port }}{% if kafka_enable_nat_external_listener %},EXTERNAL://0.0.0.0:{{ kafka_external_listener_port }}{% endif %}
 advertised.listeners=INTERNAL://{{ kafka_internal_ip | default(ansible_host) }}:{{ kafka_internal_listener_port }}{% if kafka_enable_nat_external_listener %},EXTERNAL://{{ kafka_external_ip | default(ansible_host) }}:{{ kafka_external_listener_port }}{% endif %}
-listener.security.protocol.map=INTERNAL:PLAINTEXT{% if kafka_enable_nat_external_listener %},EXTERNAL:PLAINTEXT{% endif %}
+listener.security.protocol.map=INTERNAL:{{ kafka_internal_protocol }}{% if kafka_enable_nat_external_listener %},EXTERNAL:{{ kafka_external_protocol }}{% endif %}
 inter.broker.listener.name=INTERNAL
+
+{% if kafka_security_enabled %}
+ssl.keystore.location={{ kafka_ssl_keystore_location }}
+ssl.keystore.password={{ kafka_ssl_keystore_password }}
+ssl.key.password={{ kafka_ssl_key_password }}
+ssl.truststore.location={{ kafka_ssl_truststore_location }}
+ssl.truststore.password={{ kafka_ssl_truststore_password }}
+ssl.client.auth={{ kafka_ssl_client_auth }}
+ssl.endpoint.identification.algorithm=https
+{% endif %}
+
+{% if kafka_security_enabled and kafka_security_mode == 'sasl_ssl' %}
+sasl.enabled.mechanisms={{ kafka_sasl_mechanism }}
+sasl.mechanism.inter.broker.protocol={{ kafka_sasl_inter_broker_mechanism }}
+listener.name.internal.{{ kafka_sasl_mechanism | lower }}.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="{{ kafka_sasl_interbroker_username }}" password="{{ kafka_sasl_interbroker_password }}";
+{% if kafka_enable_nat_external_listener %}
+listener.name.external.{{ kafka_sasl_mechanism | lower }}.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="{{ kafka_sasl_interbroker_username }}" password="{{ kafka_sasl_interbroker_password }}";
+{% endif %}
+{% endif %}
+
+{% if kafka_acl_enable | default(false) %}
+authorizer.class.name=kafka.security.authorizer.AclAuthorizer
+allow.everyone.if.no.acl.found=false
+super.users={{ kafka_super_users | join(';') }}
+{% endif %}
 
 num.network.threads=3
 num.io.threads=8

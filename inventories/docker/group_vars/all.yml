@@ -2,10 +2,16 @@
 docker_project_dir: /opt/kafka-lab
 docker_compose_file: docker-compose.yml
 
-dev_kafka_image: bitnami/kafka:3.8
-dev_zookeeper_image: bitnami/zookeeper:3.9
+dev_kafka_image: confluentinc/cp-kafka:7.6.1
+dev_zookeeper_image: confluentinc/cp-zookeeper:7.6.1
 dev_console_image: docker.redpanda.com/redpandadata/console:v2.7.2
 dev_node_exporter_image: prom/node-exporter:v1.8.2
-dev_jmx_exporter_image: bitnami/jmx-exporter:1.0.1
+dev_jmx_exporter_image: bitnami/jmx-exporter:latest
+dev_prometheus_image: prom/prometheus:v2.54.1
+dev_grafana_image: grafana/grafana:11.2.0
 
-kafka_external_listener_port_base: 29092
+kafka_external_listener_port_base: 9092
+dev_prometheus_port: 9090
+dev_grafana_port: 3000
+dev_grafana_admin_user: admin
+dev_grafana_admin_password: admin

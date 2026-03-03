@@ -44,3 +44,45 @@ chrony_ntp_servers:
 
 pfsense_wan_interface: WAN
 pfsense_nat_network: 10.10.10.0/24
+
+kafka_security_enabled: true
+kafka_security_mode: sasl_ssl
+kafka_pki_enabled: true
+kafka_pki_cert_valid_days: 825
+kafka_ssl_keystore_location: /etc/kafka/secrets/kafka.server.keystore.jks
+kafka_ssl_keystore_password: changeit
+kafka_ssl_key_password: changeit
+kafka_ssl_truststore_location: /etc/kafka/secrets/kafka.server.truststore.jks
+kafka_ssl_truststore_password: changeit
+kafka_security_jaas_path: /etc/kafka/kafka_server_jaas.conf
+kafka_sasl_mechanism: PLAIN
+kafka_sasl_inter_broker_mechanism: PLAIN
+kafka_sasl_interbroker_username: broker
+kafka_sasl_interbroker_password: broker-secret-change-me
+kafka_sasl_admin_username: admin
+kafka_sasl_admin_password: admin-secret-change-me
+kafka_sasl_client_users:
+  - username: appclient
+    password: appclient-secret-change-me
+kafka_acl_enable: true
+kafka_super_users:
+  - "User:admin"
+  - "User:broker"
+
+firewall_acl_enabled: true
+firewall_admin_cidrs:
+  - 10.10.0.0/16
+firewall_kafka_client_cidrs:
+  - 10.20.0.0/16
+firewall_monitoring_cidrs:
+  - 10.30.0.0/16
+firewall_console_cidrs:
+  - 10.40.0.0/16
+firewall_internal_cluster_cidrs:
+  - 10.10.0.0/16
+
+prometheus_grafana_project_dir: /opt/prometheus-grafana
+prometheus_grafana_prometheus_port: 9090
+prometheus_grafana_grafana_port: 3000
+prometheus_grafana_grafana_admin_user: admin
+prometheus_grafana_grafana_admin_password: admin

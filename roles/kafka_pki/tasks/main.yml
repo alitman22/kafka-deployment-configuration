@@ -1,0 +1,174 @@
+---
+- name: Ensure OpenSSL is installed
+  ansible.builtin.apt:
+    name: openssl
+    state: present
+    update_cache: true
+  when: kafka_pki_enabled | bool
+
+- name: Ensure Kafka secrets directory exists
+  ansible.builtin.file:
+    path: /etc/kafka/secrets
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0750'
+  when: kafka_pki_enabled | bool
+
+- name: Ensure local artifacts directory exists on control node
+  ansible.builtin.file:
+    path: "{{ kafka_pki_local_artifacts_dir }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  become: false
+  run_once: true
+  when: kafka_pki_enabled | bool
+
+- name: Generate CA private key on CA host
+  ansible.builtin.command:
+    cmd: openssl genrsa -out /etc/kafka/secrets/ca-key.pem 4096
+    creates: /etc/kafka/secrets/ca-key.pem
+  delegate_to: "{{ kafka_pki_ca_host }}"
+  run_once: true
+  when: kafka_pki_enabled | bool
+
+- name: Generate CA certificate on CA host
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -new -x509 -key /etc/kafka/secrets/ca-key.pem
+      -out /etc/kafka/secrets/ca-cert.pem
+      -days {{ kafka_pki_cert_valid_days }}
+      -subj /CN=Kafka-Cluster-CA
+    creates: /etc/kafka/secrets/ca-cert.pem
+  delegate_to: "{{ kafka_pki_ca_host }}"
+  run_once: true
+  when: kafka_pki_enabled | bool
+
+- name: Fetch CA key from CA host to control node
+  ansible.builtin.fetch:
+    src: /etc/kafka/secrets/ca-key.pem
+    dest: "{{ kafka_pki_local_artifacts_dir }}/ca-key.pem"
+    flat: true
+  delegate_to: "{{ kafka_pki_ca_host }}"
+  run_once: true
+  when: kafka_pki_enabled | bool
+
+- name: Fetch CA cert from CA host to control node
+  ansible.builtin.fetch:
+    src: /etc/kafka/secrets/ca-cert.pem
+    dest: "{{ kafka_pki_local_artifacts_dir }}/ca-cert.pem"
+    flat: true
+  delegate_to: "{{ kafka_pki_ca_host }}"
+  run_once: true
+  when: kafka_pki_enabled | bool
+
+- name: Distribute CA key to brokers
+  ansible.builtin.copy:
+    src: "{{ kafka_pki_local_artifacts_dir }}/ca-key.pem"
+    dest: /etc/kafka/secrets/ca-key.pem
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0600'
+  when: kafka_pki_enabled | bool
+
+- name: Distribute CA cert to brokers
+  ansible.builtin.copy:
+    src: "{{ kafka_pki_local_artifacts_dir }}/ca-cert.pem"
+    dest: /etc/kafka/secrets/ca-cert.pem
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0644'
+  when: kafka_pki_enabled | bool
+
+- name: Generate broker private key
+  ansible.builtin.command:
+    cmd: openssl genrsa -out /etc/kafka/secrets/kafka.server.key.pem 2048
+    creates: /etc/kafka/secrets/kafka.server.key.pem
+  when: kafka_pki_enabled | bool
+
+- name: Generate broker CSR
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -new
+      -key /etc/kafka/secrets/kafka.server.key.pem
+      -out /etc/kafka/secrets/kafka.server.csr
+      -subj /CN={{ kafka_ssl_common_name }}
+  args:
+    creates: /etc/kafka/secrets/kafka.server.csr
+  when: kafka_pki_enabled | bool
+
+- name: Write broker SAN extension file
+  ansible.builtin.copy:
+    dest: /etc/kafka/secrets/kafka.server.ext
+    content: |
+      subjectAltName={{ kafka_ssl_san | join(',') }}
+      extendedKeyUsage=serverAuth,clientAuth
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0644'
+  when: kafka_pki_enabled | bool
+
+- name: Sign broker certificate with CA
+  ansible.builtin.command:
+    cmd: >-
+      openssl x509 -req
+      -in /etc/kafka/secrets/kafka.server.csr
+      -CA /etc/kafka/secrets/ca-cert.pem
+      -CAkey /etc/kafka/secrets/ca-key.pem
+      -CAcreateserial
+      -out /etc/kafka/secrets/kafka.server.cert.pem
+      -days {{ kafka_pki_cert_valid_days }}
+      -extfile /etc/kafka/secrets/kafka.server.ext
+    creates: /etc/kafka/secrets/kafka.server.cert.pem
+  when: kafka_pki_enabled | bool
+
+- name: Create PKCS12 bundle for keytool import
+  ansible.builtin.command:
+    cmd: >-
+      openssl pkcs12 -export
+      -in /etc/kafka/secrets/kafka.server.cert.pem
+      -inkey /etc/kafka/secrets/kafka.server.key.pem
+      -name kafka-server
+      -out /etc/kafka/secrets/kafka.server.p12
+      -password pass:{{ kafka_ssl_keystore_password }}
+    creates: /etc/kafka/secrets/kafka.server.p12
+  when: kafka_pki_enabled | bool
+
+- name: Create Kafka JKS keystore
+  ansible.builtin.command:
+    cmd: >-
+      keytool -importkeystore
+      -destkeystore {{ kafka_ssl_keystore_location }}
+      -deststorepass {{ kafka_ssl_keystore_password }}
+      -destkeypass {{ kafka_ssl_key_password }}
+      -srckeystore /etc/kafka/secrets/kafka.server.p12
+      -srcstoretype PKCS12
+      -srcstorepass {{ kafka_ssl_keystore_password }}
+      -alias kafka-server
+      -noprompt
+    creates: "{{ kafka_ssl_keystore_location }}"
+  when: kafka_pki_enabled | bool
+
+- name: Create Kafka JKS truststore with CA
+  ansible.builtin.command:
+    cmd: >-
+      keytool -keystore {{ kafka_ssl_truststore_location }}
+      -alias kafka-ca
+      -import
+      -file /etc/kafka/secrets/ca-cert.pem
+      -storepass {{ kafka_ssl_truststore_password }}
+      -noprompt
+    creates: "{{ kafka_ssl_truststore_location }}"
+  when: kafka_pki_enabled | bool
+
+- name: Ensure keystore and truststore ownership
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0640'
+  loop:
+    - "{{ kafka_ssl_keystore_location }}"
+    - "{{ kafka_ssl_truststore_location }}"
+  when: kafka_pki_enabled | bool

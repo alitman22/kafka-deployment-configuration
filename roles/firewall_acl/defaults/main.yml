@@ -1,0 +1,12 @@
+---
+firewall_acl_enabled: true
+firewall_admin_cidrs:
+  - 10.10.0.0/16
+firewall_kafka_client_cidrs:
+  - 10.10.0.0/16
+firewall_monitoring_cidrs:
+  - 10.10.0.0/16
+firewall_console_cidrs:
+  - 10.10.0.0/16
+firewall_internal_cluster_cidrs:
+  - 10.10.0.0/16

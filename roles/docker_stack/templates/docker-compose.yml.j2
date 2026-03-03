@@ -1,130 +1,199 @@
-version: "3.9"
 services:
-  zk1:
+  zookeeper1:
     image: {{ dev_zookeeper_image }}
-    hostname: zk1
+    container_name: zookeeper1
+    hostname: zookeeper1
     environment:
-      ZOO_SERVER_ID: 1
-      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-      ALLOW_ANONYMOUS_LOGIN: "yes"
-    ports: ["22181:2181"]
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zookeeper1:2888:3888;zookeeper2:2888:3888;zookeeper3:2888:3888
+    ports:
+      - "22181:2181"
 
-  zk2:
+  zookeeper2:
     image: {{ dev_zookeeper_image }}
-    hostname: zk2
+    container_name: zookeeper2
+    hostname: zookeeper2
     environment:
-      ZOO_SERVER_ID: 2
-      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOOKEEPER_SERVER_ID: 2
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zookeeper1:2888:3888;zookeeper2:2888:3888;zookeeper3:2888:3888
+    ports:
+      - "32181:2181"
 
-  zk3:
+  zookeeper3:
     image: {{ dev_zookeeper_image }}
-    hostname: zk3
+    container_name: zookeeper3
+    hostname: zookeeper3
     environment:
-      ZOO_SERVER_ID: 3
-      ZOO_SERVERS: server.1=zk1:2888:3888;2181 server.2=zk2:2888:3888;2181 server.3=zk3:2888:3888;2181
-      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOOKEEPER_SERVER_ID: 3
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zookeeper1:2888:3888;zookeeper2:2888:3888;zookeeper3:2888:3888
+    ports:
+      - "42181:2181"
 
   kafka1:
     image: {{ dev_kafka_image }}
+    container_name: kafka1
     hostname: kafka1
-    depends_on: [zk1, zk2, zk3]
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+      - zookeeper3
     ports:
-      - "{{ kafka_external_listener_port_base }}:9094"
-      - "17071:7071"
+      - "{{ kafka_external_listener_port_base }}:9092"
+      - "9101:9101"
     environment:
-      KAFKA_CFG_BROKER_ID: 1
-      KAFKA_CFG_ZOOKEEPER_CONNECT: zk1:2181,zk2:2181,zk3:2181
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:9094
-      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka1:9092,EXTERNAL://localhost:{{ kafka_external_listener_port_base }}
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
-      ALLOW_PLAINTEXT_LISTENER: "yes"
-      JMX_PORT: 7071
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+      KAFKA_LISTENERS: INTERNAL://kafka1:19092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:19092,EXTERNAL://localhost:{{ kafka_external_listener_port_base }}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: kafka1
 
   kafka2:
     image: {{ dev_kafka_image }}
+    container_name: kafka2
     hostname: kafka2
-    depends_on: [zk1, zk2, zk3]
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+      - zookeeper3
     ports:
-      - "{{ kafka_external_listener_port_base + 1 }}:9094"
-      - "27071:7071"
+      - "{{ kafka_external_listener_port_base + 1 }}:9092"
+      - "9102:9101"
     environment:
-      KAFKA_CFG_BROKER_ID: 2
-      KAFKA_CFG_ZOOKEEPER_CONNECT: zk1:2181,zk2:2181,zk3:2181
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:9094
-      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka2:9092,EXTERNAL://localhost:{{ kafka_external_listener_port_base + 1 }}
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
-      ALLOW_PLAINTEXT_LISTENER: "yes"
-      JMX_PORT: 7071
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+      KAFKA_LISTENERS: INTERNAL://kafka2:19092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka2:19092,EXTERNAL://localhost:{{ kafka_external_listener_port_base + 1 }}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: kafka2
 
   kafka3:
     image: {{ dev_kafka_image }}
+    container_name: kafka3
     hostname: kafka3
-    depends_on: [zk1, zk2, zk3]
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+      - zookeeper3
     ports:
-      - "{{ kafka_external_listener_port_base + 2 }}:9094"
-      - "37071:7071"
+      - "{{ kafka_external_listener_port_base + 2 }}:9092"
+      - "9103:9101"
     environment:
-      KAFKA_CFG_BROKER_ID: 3
-      KAFKA_CFG_ZOOKEEPER_CONNECT: zk1:2181,zk2:2181,zk3:2181
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:9094
-      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka3:9092,EXTERNAL://localhost:{{ kafka_external_listener_port_base + 2 }}
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
-      ALLOW_PLAINTEXT_LISTENER: "yes"
-      JMX_PORT: 7071
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+      KAFKA_LISTENERS: INTERNAL://kafka3:19092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka3:19092,EXTERNAL://localhost:{{ kafka_external_listener_port_base + 2 }}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: kafka3
 
   redpanda-console:
     image: {{ dev_console_image }}
-    depends_on: [kafka1, kafka2, kafka3]
+    container_name: redpanda-console
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
     ports:
       - "8080:8080"
-    command:
-      - /app/console
-      - --kafka.brokers
-      - kafka1:9092
-      - --kafka.brokers
-      - kafka2:9092
-      - --kafka.brokers
-      - kafka3:9092
-      - --server.listen-port
-      - "8080"
+    volumes:
+      - './console/config.yml:/etc/console/config.yml:ro'
+    command: ["--config.filepath=/etc/console/config.yml"]
 
   node-exporter:
     image: {{ dev_node_exporter_image }}
-    command:
-      - '--path.rootfs=/host'
-    network_mode: host
-    pid: host
-    restart: unless-stopped
-    volumes:
-      - '/:/host:ro,rslave'
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
 
   jmx-exporter-kafka1:
     image: {{ dev_jmx_exporter_image }}
-    ports: ["19404:5556"]
-    command:
-      - "5556"
-      - /opt/bitnami/jmx-exporter/config.yml
-      - "kafka1:7071"
+    container_name: jmx-exporter-kafka1
+    depends_on:
+      - kafka1
+    ports:
+      - "5556:5556"
+    volumes:
+      - './jmx/config-kafka1.yml:/etc/jmx-exporter/config.yml:ro'
+    command: ["5556", "/etc/jmx-exporter/config.yml"]
 
   jmx-exporter-kafka2:
     image: {{ dev_jmx_exporter_image }}
-    ports: ["29404:5556"]
-    command:
-      - "5556"
-      - /opt/bitnami/jmx-exporter/config.yml
-      - "kafka2:7071"
+    container_name: jmx-exporter-kafka2
+    depends_on:
+      - kafka2
+    ports:
+      - "5557:5557"
+    volumes:
+      - './jmx/config-kafka2.yml:/etc/jmx-exporter/config.yml:ro'
+    command: ["5557", "/etc/jmx-exporter/config.yml"]
 
   jmx-exporter-kafka3:
     image: {{ dev_jmx_exporter_image }}
-    ports: ["39404:5556"]
+    container_name: jmx-exporter-kafka3
+    depends_on:
+      - kafka3
+    ports:
+      - "5558:5558"
+    volumes:
+      - './jmx/config-kafka3.yml:/etc/jmx-exporter/config.yml:ro'
+    command: ["5558", "/etc/jmx-exporter/config.yml"]
+
+  prometheus:
+    image: {{ dev_prometheus_image }}
+    container_name: prometheus
+    ports:
+      - "{{ dev_prometheus_port }}:9090"
+    volumes:
+      - './prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro'
+      - 'prometheus-data:/prometheus'
     command:
-      - "5556"
-      - /opt/bitnami/jmx-exporter/config.yml
-      - "kafka3:7071"
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: {{ dev_grafana_image }}
+    container_name: grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "{{ dev_grafana_port }}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER={{ dev_grafana_admin_user }}
+      - GF_SECURITY_ADMIN_PASSWORD={{ dev_grafana_admin_password }}
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/kafka-metrics-dashboard.json
+    volumes:
+      - 'grafana-data:/var/lib/grafana'
+      - './grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro'
+      - './grafana/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro'
+      - './grafana/dashboards:/var/lib/grafana/dashboards:ro'
+
+volumes:
+  prometheus-data:
+  grafana-data:

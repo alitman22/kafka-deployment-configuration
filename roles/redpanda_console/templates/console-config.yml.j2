@@ -3,5 +3,19 @@ kafka:
 {% for broker in groups['kafka'] %}
     - {{ hostvars[broker]['kafka_internal_ip'] | default(hostvars[broker]['ansible_host']) }}:{{ kafka_internal_listener_port }}
 {% endfor %}
+{% if kafka_security_enabled and kafka_security_mode == 'sasl_ssl' %}
+  sasl:
+    enabled: true
+    username: {{ kafka_sasl_admin_username }}
+    password: {{ kafka_sasl_admin_password }}
+    mechanism: {{ kafka_sasl_mechanism }}
+  tls:
+    enabled: true
+    insecureSkipTlsVerify: true
+{% elif kafka_security_enabled and kafka_security_mode == 'mtls' %}
+  tls:
+    enabled: true
+    insecureSkipTlsVerify: true
+{% endif %}
 server:
   listenPort: {{ redpanda_console_port }}

@@ -1,0 +1,9 @@
+---
+kafka_pki_enabled: true
+kafka_pki_ca_host: "{{ groups['kafka'][0] }}"
+kafka_pki_local_artifacts_dir: "{{ playbook_dir | dirname }}/.artifacts/pki"
+kafka_pki_cert_valid_days: 825
+kafka_ssl_common_name: "{{ inventory_hostname }}"
+kafka_ssl_san:
+  - "DNS:{{ inventory_hostname }}"
+  - "IP:{{ kafka_internal_ip | default(ansible_host) }}"

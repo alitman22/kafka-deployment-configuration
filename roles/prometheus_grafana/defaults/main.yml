@@ -1,0 +1,8 @@
+---
+prometheus_grafana_project_dir: /opt/prometheus-grafana
+prometheus_grafana_prometheus_port: 9090
+prometheus_grafana_grafana_port: 3000
+prometheus_grafana_grafana_admin_user: admin
+prometheus_grafana_grafana_admin_password: admin
+prometheus_grafana_image: prom/prometheus:v2.54.1
+prometheus_grafana_grafana_image: grafana/grafana:11.2.0
