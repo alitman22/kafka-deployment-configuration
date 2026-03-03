@@ -1,0 +1,39 @@
+---
+- name: Install docker engine and compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose-plugin
+      - python3-docker
+    state: present
+    update_cache: true
+
+- name: Ensure docker service is enabled and running
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Create docker project directory
+  ansible.builtin.file:
+    path: "{{ docker_project_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Render docker compose stack file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ docker_project_dir }}/{{ docker_compose_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Bring up docker stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_project_dir }}"
+    files:
+      - "{{ docker_compose_file }}"
+    state: present
+    pull: always

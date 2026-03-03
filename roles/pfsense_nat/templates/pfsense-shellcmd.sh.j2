@@ -1,0 +1,9 @@
+#!/bin/sh
+# Optional helper commands for pfSense Shellcmd package.
+# Review before running in production.
+
+{% for broker in groups['kafka'] %}
+echo "Create NAT for {{ broker }}: {{ hostvars[broker]['kafka_external_ip'] }}:{{ kafka_external_listener_port }} -> {{ hostvars[broker]['kafka_internal_ip'] | default(hostvars[broker]['ansible_host']) }}:{{ kafka_external_listener_port }}"
+{% endfor %}
+
+echo "Apply rules in pfSense WebUI: Firewall > NAT > Port Forward"

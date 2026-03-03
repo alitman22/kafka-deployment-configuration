@@ -1,0 +1,6 @@
+---
+- name: Restart redpanda console
+  ansible.builtin.systemd:
+    name: redpanda-console
+    daemon_reload: true
+    state: restarted

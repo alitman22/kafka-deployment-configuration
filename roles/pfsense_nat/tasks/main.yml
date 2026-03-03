@@ -1,0 +1,18 @@
+---
+- name: Create generated directory for pfSense artifacts
+  ansible.builtin.file:
+    path: "{{ playbook_dir | dirname }}/generated"
+    state: directory
+    mode: '0755'
+
+- name: Render pfSense NAT plan document
+  ansible.builtin.template:
+    src: pfsense-nat-plan.md.j2
+    dest: "{{ playbook_dir | dirname }}/generated/pfsense-nat-plan.md"
+    mode: '0644'
+
+- name: Render pfSense shellcmd snippet
+  ansible.builtin.template:
+    src: pfsense-shellcmd.sh.j2
+    dest: "{{ playbook_dir | dirname }}/generated/pfsense-shellcmd.sh"
+    mode: '0755'

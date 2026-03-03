@@ -1,0 +1,28 @@
+---
+- name: Create jmx exporter directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0755'
+  loop:
+    - /opt/jmx_exporter
+    - /etc/jmx_exporter
+
+- name: Download jmx exporter java agent
+  ansible.builtin.get_url:
+    url: "https://github.com/prometheus/jmx_exporter/releases/download/{{ jmx_exporter_version }}/jmx_prometheus_javaagent-{{ jmx_exporter_version }}.jar"
+    dest: /opt/jmx_exporter/jmx_prometheus_javaagent.jar
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0644'
+
+- name: Render kafka jmx exporter configuration
+  ansible.builtin.template:
+    src: kafka-jmx-exporter.yml.j2
+    dest: /etc/jmx_exporter/kafka-jmx-exporter.yml
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0644'
+  notify: Restart kafka

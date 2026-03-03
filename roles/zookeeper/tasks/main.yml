@@ -1,0 +1,81 @@
+---
+- name: Create zookeeper group
+  ansible.builtin.group:
+    name: "{{ zookeeper_group }}"
+    state: present
+
+- name: Create zookeeper user
+  ansible.builtin.user:
+    name: "{{ zookeeper_user }}"
+    group: "{{ zookeeper_group }}"
+    shell: /usr/sbin/nologin
+    system: true
+    create_home: false
+
+- name: Create zookeeper directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ zookeeper_user }}"
+    group: "{{ zookeeper_group }}"
+    mode: '0755'
+  loop:
+    - "{{ zookeeper_install_dir }}"
+    - "{{ zookeeper_data_dir }}"
+    - "{{ zookeeper_log_dir }}"
+    - /etc/zookeeper
+
+- name: Download zookeeper
+  ansible.builtin.get_url:
+    url: "https://archive.apache.org/dist/zookeeper/zookeeper-{{ zookeeper_version }}/apache-zookeeper-{{ zookeeper_version }}-bin.tar.gz"
+    dest: "/tmp/zookeeper-{{ zookeeper_version }}.tar.gz"
+    mode: '0644'
+
+- name: Extract zookeeper
+  ansible.builtin.unarchive:
+    src: "/tmp/zookeeper-{{ zookeeper_version }}.tar.gz"
+    dest: /opt
+    remote_src: true
+    creates: "/opt/apache-zookeeper-{{ zookeeper_version }}-bin"
+
+- name: Link zookeeper installation
+  ansible.builtin.file:
+    src: "/opt/apache-zookeeper-{{ zookeeper_version }}-bin"
+    dest: "{{ zookeeper_install_dir }}"
+    owner: "{{ zookeeper_user }}"
+    group: "{{ zookeeper_group }}"
+    state: link
+
+- name: Create myid file
+  ansible.builtin.copy:
+    content: "{{ zookeeper_id }}\n"
+    dest: "{{ zookeeper_data_dir }}/myid"
+    owner: "{{ zookeeper_user }}"
+    group: "{{ zookeeper_group }}"
+    mode: '0644'
+  notify: Restart zookeeper
+
+- name: Configure zoo.cfg
+  ansible.builtin.template:
+    src: zoo.cfg.j2
+    dest: /etc/zookeeper/zoo.cfg
+    owner: "{{ zookeeper_user }}"
+    group: "{{ zookeeper_group }}"
+    mode: '0644'
+  notify: Restart zookeeper
+
+- name: Configure zookeeper systemd service
+  ansible.builtin.template:
+    src: zookeeper.service.j2
+    dest: /etc/systemd/system/zookeeper.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart zookeeper
+
+- name: Ensure zookeeper service is enabled and running
+  ansible.builtin.systemd:
+    name: zookeeper
+    daemon_reload: true
+    enabled: true
+    state: started

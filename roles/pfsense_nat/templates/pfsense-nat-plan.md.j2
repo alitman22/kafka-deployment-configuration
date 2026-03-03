@@ -1,0 +1,24 @@
+# pfSense NAT + Firewall plan for Kafka
+
+## Context
+- Internal Kafka broker network: `{{ pfsense_nat_network }}`
+- WAN interface: `{{ pfsense_wan_interface }}`
+- External listener port (per broker): `{{ kafka_external_listener_port }}`
+
+## 1) Create port forwards (NAT)
+{% for broker in groups['kafka'] %}
+- Forward WAN `{{ hostvars[broker]['kafka_external_ip'] }}:{{ kafka_external_listener_port }}` to `{{ hostvars[broker]['kafka_internal_ip'] | default(hostvars[broker]['ansible_host']) }}:{{ kafka_external_listener_port }}` (TCP)
+{% endfor %}
+
+## 2) Create associated firewall rules
+- Allow TCP traffic on WAN for each external broker IP and port listed above.
+- Restrict source CIDRs to known client networks whenever possible.
+
+## 3) Validate external connectivity
+- From a client outside NAT:
+  - `kcat -b {{ hostvars[groups['kafka'][0]]['kafka_external_ip'] }}:{{ kafka_external_listener_port }} -L`
+- Confirm metadata returns all `EXTERNAL` advertised listeners.
+
+## 4) Security notes
+- For production, use SASL_SSL or mTLS listeners.
+- Keep management endpoints (`node_exporter`, `jmx_exporter`, SSH) private.

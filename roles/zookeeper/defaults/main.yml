@@ -1,0 +1,7 @@
+---
+zookeeper_user: zookeeper
+zookeeper_group: zookeeper
+zookeeper_tick_time: 2000
+zookeeper_init_limit: 10
+zookeeper_sync_limit: 5
+zookeeper_max_client_cnxns: 60

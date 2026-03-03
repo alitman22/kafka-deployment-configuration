@@ -1,0 +1,15 @@
+[Unit]
+Description=Redpanda Console
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ redpanda_console_user }}
+Group={{ redpanda_console_group }}
+ExecStart={{ redpanda_console_install_dir }}/console --config.filepath={{ redpanda_console_config_dir }}/config.yml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

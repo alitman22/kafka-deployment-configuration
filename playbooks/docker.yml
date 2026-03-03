@@ -1,0 +1,7 @@
+---
+- name: Dockerized Kafka stack for dev/staging
+  hosts: docker_hosts
+  gather_facts: true
+  become: true
+  roles:
+    - role: docker_stack

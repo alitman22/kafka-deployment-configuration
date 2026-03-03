@@ -1,0 +1,17 @@
+[Unit]
+Description=Apache Zookeeper
+After=network.target
+
+[Service]
+Type=simple
+User={{ zookeeper_user }}
+Group={{ zookeeper_group }}
+Environment=ZOO_LOG_DIR={{ zookeeper_log_dir }}
+ExecStart={{ zookeeper_install_dir }}/bin/zkServer.sh start-foreground /etc/zookeeper/zoo.cfg
+ExecStop={{ zookeeper_install_dir }}/bin/zkServer.sh stop /etc/zookeeper/zoo.cfg
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target

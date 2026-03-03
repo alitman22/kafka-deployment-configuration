@@ -1,0 +1,20 @@
+---
+- name: Add or scale Kafka brokers
+  hosts: kafka
+  gather_facts: true
+  become: true
+  serial: 1
+  vars:
+    scale_rebalance: false
+  roles:
+    - role: jmx_exporter
+    - role: kafka
+
+  post_tasks:
+    - name: Optional partition reassignment generation reminder
+      ansible.builtin.debug:
+        msg:
+          - "Broker scale run complete."
+          - "If new broker IDs were added, generate/execute partition reassignment for topic movement."
+          - "Use scripts/rebalance-topics.sh on a broker host."
+      when: scale_rebalance | bool

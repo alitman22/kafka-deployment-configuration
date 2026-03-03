@@ -1,0 +1,81 @@
+---
+- name: Create kafka group
+  ansible.builtin.group:
+    name: "{{ kafka_group }}"
+    state: present
+
+- name: Create kafka user
+  ansible.builtin.user:
+    name: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    shell: "{{ kafka_user_shell }}"
+    system: true
+    create_home: false
+
+- name: Create kafka directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0755'
+  loop: "{{ kafka_data_dirs + [kafka_install_dir, kafka_log_dir, kafka_config_dir] }}"
+
+- name: Download kafka package
+  ansible.builtin.get_url:
+    url: "https://archive.apache.org/dist/kafka/{{ kafka_version }}/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
+    dest: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
+    mode: '0644'
+
+- name: Extract kafka package
+  ansible.builtin.unarchive:
+    src: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
+    dest: /opt
+    remote_src: true
+    creates: "/opt/kafka_{{ kafka_scala_version }}-{{ kafka_version }}"
+
+- name: Link kafka installation
+  ansible.builtin.file:
+    src: "/opt/kafka_{{ kafka_scala_version }}-{{ kafka_version }}"
+    dest: "{{ kafka_install_dir }}"
+    state: link
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+
+- name: Build zookeeper connect string
+  ansible.builtin.set_fact:
+    kafka_zookeeper_connect: "{{ groups['zookeeper'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', ':' ~ zookeeper_client_port|string) | join(',') }}"
+
+- name: Render kafka server.properties
+  ansible.builtin.template:
+    src: server.properties.j2
+    dest: "{{ kafka_config_dir }}/server.properties"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0644'
+  notify: Restart kafka
+
+- name: Render kafka environment file
+  ansible.builtin.template:
+    src: kafka-env.sh.j2
+    dest: "{{ kafka_config_dir }}/kafka-env.sh"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: '0644'
+  notify: Restart kafka
+
+- name: Render kafka systemd service
+  ansible.builtin.template:
+    src: kafka.service.j2
+    dest: /etc/systemd/system/kafka.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart kafka
+
+- name: Ensure kafka service is enabled and running
+  ansible.builtin.systemd:
+    name: kafka
+    daemon_reload: true
+    enabled: true
+    state: started

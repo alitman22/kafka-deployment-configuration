@@ -1,0 +1,46 @@
+---
+ansible_user: ubuntu
+ansible_ssh_private_key_file: ~/.ssh/id_rsa
+
+timezone: UTC
+
+java_package: openjdk-17-jre-headless
+
+kafka_version: 3.8.1
+kafka_scala_version: 2.13
+kafka_install_dir: /opt/kafka
+kafka_user: kafka
+kafka_group: kafka
+kafka_data_dirs:
+  - /var/lib/kafka/data
+kafka_log_dir: /var/log/kafka
+kafka_heap_opts: "-Xms2G -Xmx2G"
+kafka_jmx_port: 7071
+kafka_internal_listener_port: 9092
+kafka_external_listener_port: 19092
+kafka_replication_factor: 3
+kafka_min_insync_replicas: 2
+
+zookeeper_version: 3.9.2
+zookeeper_install_dir: /opt/zookeeper
+zookeeper_data_dir: /var/lib/zookeeper
+zookeeper_log_dir: /var/log/zookeeper
+zookeeper_client_port: 2181
+zookeeper_peer_port: 2888
+zookeeper_election_port: 3888
+
+jmx_exporter_version: 1.0.1
+jmx_exporter_port: 9404
+
+node_exporter_version: 1.8.2
+node_exporter_port: 9100
+
+redpanda_console_version: v2.7.2
+redpanda_console_port: 8080
+
+chrony_ntp_servers:
+  - time.cloudflare.com
+  - time.google.com
+
+pfsense_wan_interface: WAN
+pfsense_nat_network: 10.10.10.0/24

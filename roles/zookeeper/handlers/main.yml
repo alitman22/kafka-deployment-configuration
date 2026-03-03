@@ -1,0 +1,6 @@
+---
+- name: Restart zookeeper
+  ansible.builtin.systemd:
+    name: zookeeper
+    daemon_reload: true
+    state: restarted

@@ -1,0 +1,3 @@
+---
+- import_playbook: playbooks/prod.yml
+- import_playbook: playbooks/docker.yml

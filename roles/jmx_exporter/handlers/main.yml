@@ -1,0 +1,5 @@
+---
+- name: Restart kafka
+  ansible.builtin.systemd:
+    name: kafka
+    state: restarted

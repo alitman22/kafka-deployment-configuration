@@ -1,0 +1,5 @@
+---
+redpanda_console_user: redpanda
+redpanda_console_group: redpanda
+redpanda_console_install_dir: /opt/redpanda-console
+redpanda_console_config_dir: /etc/redpanda-console

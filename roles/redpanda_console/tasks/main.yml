@@ -1,0 +1,68 @@
+---
+- name: Create redpanda console group
+  ansible.builtin.group:
+    name: "{{ redpanda_console_group }}"
+    state: present
+
+- name: Create redpanda console user
+  ansible.builtin.user:
+    name: "{{ redpanda_console_user }}"
+    group: "{{ redpanda_console_group }}"
+    shell: /usr/sbin/nologin
+    system: true
+    create_home: false
+
+- name: Create redpanda console directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ redpanda_console_user }}"
+    group: "{{ redpanda_console_group }}"
+    mode: '0755'
+  loop:
+    - "{{ redpanda_console_install_dir }}"
+    - "{{ redpanda_console_config_dir }}"
+
+- name: Download redpanda console release archive
+  ansible.builtin.get_url:
+    url: "https://github.com/redpanda-data/console/releases/download/{{ redpanda_console_version }}/console-linux-amd64.zip"
+    dest: /tmp/redpanda-console.zip
+    mode: '0644'
+
+- name: Extract redpanda console binary
+  ansible.builtin.unarchive:
+    src: /tmp/redpanda-console.zip
+    dest: "{{ redpanda_console_install_dir }}"
+    remote_src: true
+
+- name: Ensure redpanda console binary permissions
+  ansible.builtin.file:
+    path: "{{ redpanda_console_install_dir }}/console"
+    owner: "{{ redpanda_console_user }}"
+    group: "{{ redpanda_console_group }}"
+    mode: '0755'
+
+- name: Render redpanda console config
+  ansible.builtin.template:
+    src: console-config.yml.j2
+    dest: "{{ redpanda_console_config_dir }}/config.yml"
+    owner: "{{ redpanda_console_user }}"
+    group: "{{ redpanda_console_group }}"
+    mode: '0644'
+  notify: Restart redpanda console
+
+- name: Render redpanda console systemd service
+  ansible.builtin.template:
+    src: redpanda-console.service.j2
+    dest: /etc/systemd/system/redpanda-console.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart redpanda console
+
+- name: Ensure redpanda console service is enabled and running
+  ansible.builtin.systemd:
+    name: redpanda-console
+    daemon_reload: true
+    enabled: true
+    state: started

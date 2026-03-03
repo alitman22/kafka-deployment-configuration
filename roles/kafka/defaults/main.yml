@@ -1,0 +1,10 @@
+---
+kafka_config_dir: /etc/kafka
+kafka_user_shell: /usr/sbin/nologin
+kafka_num_partitions: 3
+kafka_offsets_topic_replication_factor: 3
+kafka_transaction_state_log_replication_factor: 3
+kafka_transaction_state_log_min_isr: 2
+kafka_log_retention_hours: 168
+kafka_message_max_bytes: 10485880
+kafka_enable_nat_external_listener: true

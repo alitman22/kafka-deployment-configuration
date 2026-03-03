@@ -1,0 +1,7 @@
+kafka:
+  brokers:
+{% for broker in groups['kafka'] %}
+    - {{ hostvars[broker]['kafka_internal_ip'] | default(hostvars[broker]['ansible_host']) }}:{{ kafka_internal_listener_port }}
+{% endfor %}
+server:
+  listenPort: {{ redpanda_console_port }}

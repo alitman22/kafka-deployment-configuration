@@ -1,0 +1,50 @@
+---
+- name: Production Kafka stack on Ubuntu 22.04
+  hosts: all
+  gather_facts: true
+  become: true
+  pre_tasks:
+    - name: Ensure OS is Ubuntu 22.04
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Ubuntu'
+          - ansible_distribution_version is version('22.04', '>=')
+        fail_msg: "This playbook supports Ubuntu 22.04+ only."
+
+- name: Configure baseline components
+  hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - role: common
+    - role: chrony
+    - role: node_exporter
+
+- name: Install and configure Zookeeper ensemble
+  hosts: zookeeper
+  gather_facts: true
+  become: true
+  roles:
+    - role: zookeeper
+
+- name: Install and configure Kafka brokers
+  hosts: kafka
+  gather_facts: true
+  become: true
+  roles:
+    - role: jmx_exporter
+    - role: kafka
+
+- name: Install Redpanda Console
+  hosts: console
+  gather_facts: true
+  become: true
+  roles:
+    - role: redpanda_console
+
+- name: Generate pfSense NAT change bundle
+  hosts: pfsense_docs
+  gather_facts: false
+  connection: local
+  roles:
+    - role: pfsense_nat
